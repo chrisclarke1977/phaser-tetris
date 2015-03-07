@@ -9,7 +9,7 @@ debug = function(){
 	if(DEBUG){
 		console.log(arguments);	
 	}	
-}
+};
 Tetris.Boot = function (game) {
 };
 Tetris.Boot.prototype = {
