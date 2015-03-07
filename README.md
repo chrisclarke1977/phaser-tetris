@@ -1,7 +1,7 @@
 # phaser-tetris
 my own efforts at learning how to use phaser
 
-From the blog by photon storm I have been inspired to try and use the phaser game engine to create 
+From the blog by photon storm I have been inspired to try and use the phaser game engine to create a tetris game.
 
 ## TODO: 
 * Place tets on the board
