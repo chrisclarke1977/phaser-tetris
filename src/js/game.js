@@ -1,4 +1,4 @@
-var Tetris = {
+var DEBUG = true, Tetris = {
     intro: 0,
     playing: 1,
     paused: 2,
@@ -6,7 +6,9 @@ var Tetris = {
     win: 4
 },
 debug = function(){
-	console.log(arguments);
+	if(DEBUG){
+		console.log(arguments);	
+	}	
 }
 Tetris.Boot = function (game) {
 };
@@ -93,7 +95,7 @@ Tetris.Game.prototype = {
 		this.cursors = this.input.keyboard.createCursorKeys();
         this.input.onDown.add(this.onDown, this);
     },
-    mood: function(pointer){
+    mood: function(){
     	switch (this.mode)
         {
             case Tetris.intro:
@@ -113,8 +115,8 @@ Tetris.Game.prototype = {
                 break;
         }
     },
-    onDown: function (pointer) {
-    	this.mood(pointer);
+    onDown: function () {
+    	this.mood();
     },
     update: function () {
 		debug("update", this.mode);
@@ -148,13 +150,14 @@ Tetris.Game.prototype = {
             	this.keyText.text = "Right";
             	this.moveRight();
             } else if (this.cursors.up.isDown ) {
-            	this.keyText.text = "Up";
+            	this.keyText.text = "Rotate";
             	this.rotate();
             } else if (this.cursors.down.isDown) {
             	this.keyText.text = "Down";
             	this.moveDown();
             } 
 			if(this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
+	       		this.keyText.text = "Drop";
 	       		this.drop();
 	        }
     	}
@@ -193,7 +196,7 @@ Tetris.Game.prototype = {
 	main: function (){
         debug("main");
         this.surface.loadTexture('playing');
-        this.helpText.text = "Keys Esc-Quit P-Pause Arrows";
+        this.helpText.text = "Keys Esc-Quit P-Pause Arrows \n And Space to drop";
         this.scoreText.visible = true;
 		this.keyText.visible = true;
 		this.nextText.visible = true;
