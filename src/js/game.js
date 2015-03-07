@@ -9,7 +9,7 @@ debug = function(){
 	if(DEBUG){
 		console.log(arguments);	
 	}	
-};
+}
 Tetris.Boot = function (game) {
 };
 Tetris.Boot.prototype = {
@@ -48,12 +48,12 @@ Tetris.Preloader.prototype = {
 
         this.load.bitmapFont('font', imagesrc+'font.png', imagesrc+'font.xml');
 
-        for (i in images){
+        for (i in images) {
         	v = images[i];
         	this.load.image(v.name, imagesrc+v.source);
     	}
         
-        for (i in audio){
+        for (i in audio) {
         	v = audio[i];
         	this.load.audio(v.name, audiosrc+v.source);
     	}
@@ -77,6 +77,40 @@ Tetris.Game = function (game) {
 };
 Tetris.Game.prototype = {
     create: function () {
+	    var r, fragmentSrc = [
+        "precision mediump float;",
+        "uniform float     time;",
+        "uniform vec2      resolution;",
+        "uniform vec2      mouse;",
+        "float length2(vec2 p) { return dot(p, p); }",
+        "float noise(vec2 p){",
+            "return fract(sin(fract(sin(p.x) * (46.13311)) + p.y) * 31.0011);",
+        "}",
+        "float worley(vec2 p) {",
+            "float d = 1e30;",
+            "for (int xo = -1; xo <= 1; ++xo) {",
+                "for (int yo = -1; yo <= 1; ++yo) {",
+                    "vec2 tp = floor(p) + vec2(xo, yo);",
+                    "d = min(d, length2(p - tp - vec2(noise(tp))));",
+                "}",
+            "}",
+            "return 3.0*exp(-4.0*abs(2.0*d - 1.0));",
+        "}",
+        "float fworley(vec2 p) {",
+            "return sqrt(sqrt(sqrt(",
+            "1.1 * // light",
+            "worley(p*5. + .3 + time*.0525) *",
+            "sqrt(worley(p * 50. + 0.3 + time * -0.15)) *",
+            "sqrt(sqrt(worley(p * -10. + 9.3))))));",
+        "}",
+        "void main() {",
+            "vec2 uv = gl_FragCoord.xy / resolution.xy;",
+            "float t = fworley(uv * resolution.xy / 1500.0);",
+            "t *= exp(-length2(abs(0.7*uv - 1.0)));",
+            "gl_FragColor = vec4(t * vec3(0.2*t, 1.5*t, 0.2*t ), 1.0);",
+        "}"
+	    ];
+
         this.surface = this.add.sprite(0, 0, 'intro');
         this.helpText = this.add.bitmapText(630, 350, 'font', "Tetris inspired game of Tetris", 16);
         this.helpText.align = 'right';
@@ -86,13 +120,56 @@ Tetris.Game.prototype = {
         this.pausedText.visible = false;
 		this.keyText = this.add.bitmapText(320, 90, 'font', "-", 16);
         this.keyText.visible = false;
-		this.nextText = this.add.bitmapText(320, 110, 'font', "Next", 16);
+		this.tetText = this.add.bitmapText(320, 110, 'font', "Stat: ", 16);
+        this.tetText.visible = false;
+        
+		this.realText = this.add.bitmapText(320, 230, 'font', "R ", 16);
+        this.realText.visible = false;
+        this.nextText = this.add.bitmapText(320, 130, 'font', "Next", 16);
         this.nextText.visible = false;
         this.mode = Tetris.intro;
         this.omode = Tetris.intro;
         this.score = 0;
         this.grid = [];
-		this.cursors = this.input.keyboard.createCursorKeys();
+        this.tetList = [ "I","O","T","S","Z","J","L" ];
+        this.tets = {
+            "I": [ [ [0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0] ],
+                   [ [1,1,1,1],[0,0,0,0],[0,0,0,0],[0,0,0,0] ] ],
+                   
+            "O": [ [ [0,0,0,0],[0,1,1,0],[0,1,1,0],[0,0,0,0] ] ],
+            
+            "T": [ [ [0,0,0,0],[0,1,1,1],[0,0,1,0],[0,0,0,0] ] ,
+                   [ [0,0,1,0],[0,0,1,1],[0,0,1,0],[0,0,0,0] ] ,
+                   [ [0,0,1,0],[0,1,1,1],[0,0,0,0],[0,0,0,0] ] ,
+                   [ [0,0,1,0],[0,1,1,0],[0,0,1,0],[0,0,0,0] ] ],
+                   
+            "S": [ [ [0,0,0,0],[0,1,1,0],[0,0,1,1],[0,0,0,0] ] ,
+                   [ [0,0,1,0],[0,1,1,0],[0,1,0,0],[0,0,0,0] ] ],
+                   
+            "Z": [ [ [0,0,0,0],[0,1,1,0],[1,1,0,0],[0,0,0,0] ] ,
+                   [ [0,1,0,0],[0,1,1,0],[0,0,1,0],[0,0,0,0] ] ],
+                   
+            "L": [ [ [0,0,0,0],[0,1,1,1],[0,1,0,0],[0,0,0,0] ] ,
+                   [ [0,0,1,0],[0,0,1,0],[0,0,1,1],[0,0,0,0] ] ,
+                   [ [0,0,0,1],[0,1,1,1],[0,0,0,0],[0,0,0,0] ] ,
+                   [ [0,1,1,0],[0,0,1,0],[0,0,1,0],[0,0,0,0] ] ],
+                   
+            "J": [ [ [0,0,0,0],[0,1,1,1],[0,0,0,1],[0,0,0,0] ] ,
+                   [ [0,0,1,1],[0,0,1,0],[0,0,1,0],[0,0,0,0] ] ,
+                   [ [0,0,1,1],[0,0,1,0],[0,0,1,0],[0,0,0,0] ] ,
+                   [ [0,0,1,0],[0,0,1,0],[0,1,1,0],[0,0,0,0] ] ]
+        };
+        r = this.tetList[Math.floor(Math.random()*7)];
+        this.tet = { x: 5, y: 22, id: r, tet: this.tets[r], step: 0};
+        this.filter = new Phaser.Filter(this, null, fragmentSrc);
+	    this.filter.setResolution(240, 480);
+        this.sprite = this.add.sprite(62,0);
+	    this.sprite.width = 240;
+	    this.sprite.height = 480;
+	    this.sprite.visible = true;
+	    this.sprite.filters = [ this.filter ];
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.real = { step: 0 };
         this.input.onDown.add(this.onDown, this);
     },
     mood: function(){
@@ -119,8 +196,30 @@ Tetris.Game.prototype = {
     	this.mood();
     },
     update: function () {
-		debug("update", this.mode);
+		// debug("update", this.mode);
+		/* update the game and handle user interaction */
+		var i, j, t;
+		
+		this.real.step += 1;
+		if (this.real.step % 30 == 0){
+		    this.moveDown();
+		}
+		this.filter.update();
 		this.scoreText.text = "Score: "+this.score;
+		this.tetText.text = "Stat: [ "+ this.tet.id +", "+ this.tet.x +", "+ this.tet.y +", "+ this.tet.step +" ]";
+		this.realText.text = this.real.step + "\n";
+		t = this.tet.tet[this.tet.step];
+		for( i in t ) {
+    	    for( j in t[i] ) {
+    	        if (t[i][j]) {
+    	            this.realText.text += "o";
+    	        } else {
+    	            this.realText.text += "-";
+    	        }
+    	    }
+    	    this.realText.text += "\n";
+		}
+		
 		this.omode = this.mode;
     	if(this.score > 250){
         	this.mode = Tetris.win;
@@ -135,7 +234,7 @@ Tetris.Game.prototype = {
         		this.mode = Tetris.intro;
 	        }
 	    } else {
-			if(this.input.keyboard.isDown(Phaser.Keyboard.P)){
+	        if(this.input.keyboard.isDown(Phaser.Keyboard.P)){
         		this.keyText.text = "P";
         		this.mode = Tetris.paused;
         	}
@@ -146,13 +245,16 @@ Tetris.Game.prototype = {
         	if (this.cursors.left.isDown ) {
             	this.keyText.text = "Left";
             	this.moveLeft();
-            } else if (this.cursors.right.isDown ) {
+            } 
+            if (this.cursors.right.isDown ) {
             	this.keyText.text = "Right";
             	this.moveRight();
-            } else if (this.cursors.up.isDown ) {
+            } 
+            if (this.cursors.up.isDown ) {
             	this.keyText.text = "Rotate";
             	this.rotate();
-            } else if (this.cursors.down.isDown) {
+            } 
+            if (this.cursors.down.isDown) {
             	this.keyText.text = "Down";
             	this.moveDown();
             } 
@@ -161,32 +263,57 @@ Tetris.Game.prototype = {
 	       		this.drop();
 	        }
     	}
+    	
+    	// this.real.x = this.origx + this.tet.x
+    	
         if(this.mode !== this.omode){
         	this.mood();
         }
 	},
 	drop: function () {
-		debug("drop");
-
+		debug("drop",this.tet);
+		/* move tet to lowest location and create new tet */
+		var r = this.tetList[Math.floor(Math.random()*7)];
+        
+		/* new tet */
+        this.tet = { x: 5, y: 22, id: r, tet: this.tets[r], step: 0};
 	},
 	rotate: function () {
-		debug("rotate");
-
+		debug("rotate",this.tet.step);
+		/* Check the tet can rotate then rotate */
+		this.tet.step += 1;
+		this.tet.step = this.tet.step % this.tet.tet.length;
 	},
 	moveDown: function () {
-		debug("moveDown");
-
+		debug("moveDown",this.tet);
+		/* Check the tet can move then move */
+		var r;
+		
+		if(this.tet.y > 0){
+		    this.tet.y --;
+		} else {
+    		r = this.tetList[Math.floor(Math.random()*7)];
+    		/* new tet */
+            this.tet = { x: 5, y: 22, id: r, tet: this.tets[r], step: 0};
+		}
 	},
 	moveRight: function () {
-		debug("moveRight");
-
+		debug("moveRight",this.tet);
+		/* Check the tet can move then move */
+		if(this.tet.x < 10) {
+		    this.tet.x ++;    
+		}
 	},
 	moveLeft: function () {
-		debug("moveLeft");
-
+		debug("moveLeft",this.tet);
+		/* Check the tet can move then move */
+		if(this.tet.x > 0) {
+		    this.tet.x --;    
+		} 
 	},
     start: function () {
-        debug("start");
+        debug("Start");
+        /* Begin the game loop */
         this.mode = Tetris.playing;
         this.sound.play('walk');
         this.score = 0;
@@ -194,29 +321,36 @@ Tetris.Game.prototype = {
         this.mood();
     },
 	main: function (){
-        debug("main");
+        debug("Main");
+        /* Main game state */
         this.surface.loadTexture('playing');
+
         this.helpText.text = "Keys Esc-Quit P-Pause Arrows \n And Space to drop";
         this.scoreText.visible = true;
 		this.keyText.visible = true;
 		this.nextText.visible = true;
 		this.pausedText.visible = false;
+		this.tetText.visible = true;
+		this.realText.visible = true;
 	},
     paused: function (){
-        debug("paused");
+        debug("Paused");
+        /* Stop its paused */
         this.surface.loadTexture('paused');
         this.pausedText.visible = true;
         this.keyText.visible = false;            
     },
 	win: function (){
         debug("Win");
+        /* Display a winning message */
         this.surface.loadTexture('win');
         this.keyText.visible = false;
         this.pausedText.visible = false;
         this.helpText.text  = "You WIN! Press Space to restart";
 	},
     quit: function () {
-		debug("quit");
+		debug("Quit");
+		/* Esc pressed get rid of the game */
         this.mode = Tetris.intro;
         this.omode = Tetris.intro;
         this.surface.loadTexture('intro');
@@ -227,6 +361,7 @@ Tetris.Game.prototype = {
 		this.nextText.visible = false;
 		this.pausedText.visible = false;
         this.score = 0;
+        this.real = { step: 0 };
         this.sound.play('reload');            
     },
     preRender: function () {
@@ -245,6 +380,7 @@ else
     document.addEventListener('DOMContentLoaded', start, false);
 }
 function start () {
+	/* Launch the game */
     document.removeEventListener('DOMContentLoaded', start, false);
     var game = new Phaser.Game(640, 480, Phaser.AUTO, 'game');
     game.state.add('Boot', Tetris.Boot);
