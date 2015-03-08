@@ -133,35 +133,13 @@ Tetris.Game.prototype = {
 	    this.sprite.visible = true;
 	    this.sprite.filters = [ this.filter ];
         
-        this.gridMatrixText = this.add.bitmapText(62, 1, 'font', "Hello", 16);
+        this.gridMatrixText = this.add.bitmapText(62, -40, 'font', "", 18);
         this.gridMatrixText.visible = false;
         
         this.mode = Tetris.intro;
         this.omode = Tetris.intro;
         this.score = 0;
-        this.gridMatrix = [ 
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,1,0,0,1,0,0,0],
-            [0,0,0,1,0,0,1,0,0,0],
-            [0,0,0,1,0,0,1,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,1,0,0,0,0,1,0,0],
-            [0,0,0,1,0,0,1,0,0,0],
-            [0,0,0,0,1,1,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0] ];
+        this.gridMatrix = [];
         this.tetList = [ "I","O","T","S","Z","J","L" ];
         this.tets = {
             "I": [ [ [0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0] ],
@@ -335,8 +313,8 @@ Tetris.Game.prototype = {
 	},
 	checkTet: function(){
 	    debug("checkTet");
-        
-        var i, j, 
+        /* Check the grid to see if the piece is going to hit */
+        var i, j, collide = false,
 		    t = this.tet.tet[this.tet.step];
 		for( i in t ) {
     	    for( j in t[i] ) {
@@ -346,7 +324,9 @@ Tetris.Game.prototype = {
     	        }
     	    }
 		}
-		this.newTet();
+		if (collide) {
+		    this.newTet();
+		}
 	},
     newTet: function(){
         debug("newTet");
@@ -388,7 +368,6 @@ Tetris.Game.prototype = {
         debug("Start");
         /* Begin the game loop */
         this.mode = Tetris.playing;
-        this.sound.play('walk');
         this.score = 0;
         this.gridMatrix = [
             [0,0,0,0,0,0,0,0,0,0],
@@ -408,9 +387,9 @@ Tetris.Game.prototype = {
             [0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0],
+            [1,1,1,1,1,1,1,1,1,1],
             [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,1,0,1,0],
             [0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0] ];
         this.mood();
