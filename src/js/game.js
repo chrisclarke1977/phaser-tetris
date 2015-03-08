@@ -5,11 +5,11 @@ var DEBUG = true, Tetris = {
     over: 3,
     win: 4
 },
-debug = function(){
-	if(DEBUG){
+debug = function() {
+	if (DEBUG) {
 		console.log(arguments);	
 	}	
-}
+};
 Tetris.Boot = function (game) {
 };
 Tetris.Boot.prototype = {
@@ -83,7 +83,7 @@ Tetris.Game.prototype = {
         "uniform vec2      resolution;",
         "uniform vec2      mouse;",
         "float length2(vec2 p) { return dot(p, p); }",
-        "float noise(vec2 p){",
+        "float noise(vec2 p) {",
             "return fract(sin(fract(sin(p.x) * (46.13311)) + p.y) * 31.0011);",
         "}",
         "float worley(vec2 p) {",
@@ -110,7 +110,6 @@ Tetris.Game.prototype = {
             "gl_FragColor = vec4(t * vec3(0.2*t, 1.5*t, 0.2*t ), 1.0);",
         "}"
 	    ];
-
         this.surface = this.add.sprite(0, 0, 'intro');
         this.helpText = this.add.bitmapText(630, 350, 'font', "Tetris inspired game of Tetris", 16);
         this.helpText.align = 'right';
@@ -122,15 +121,47 @@ Tetris.Game.prototype = {
         this.keyText.visible = false;
 		this.tetText = this.add.bitmapText(320, 110, 'font', "Stat: ", 16);
         this.tetText.visible = false;
-        
-		this.realText = this.add.bitmapText(320, 230, 'font', "R ", 16);
+        this.realText = this.add.bitmapText(320, 230, 'font', "R ", 16);
         this.realText.visible = false;
         this.nextText = this.add.bitmapText(320, 130, 'font', "Next", 16);
         this.nextText.visible = false;
+        this.filter = new Phaser.Filter(this, null, fragmentSrc);
+	    this.filter.setResolution(240, 480);
+        this.sprite = this.add.sprite(62,0);
+	    this.sprite.width = 240;
+	    this.sprite.height = 480;
+	    this.sprite.visible = true;
+	    this.sprite.filters = [ this.filter ];
+        
+        this.gridMatrixText = this.add.bitmapText(62, 1, 'font', "Hello", 16);
+        this.gridMatrixText.visible = false;
+        
         this.mode = Tetris.intro;
         this.omode = Tetris.intro;
         this.score = 0;
-        this.grid = [];
+        this.gridMatrix = [ 
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,1,0,0,0,0,1,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,0,1,1,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0] ];
         this.tetList = [ "I","O","T","S","Z","J","L" ];
         this.tets = {
             "I": [ [ [0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0] ],
@@ -161,18 +192,11 @@ Tetris.Game.prototype = {
         };
         r = this.tetList[Math.floor(Math.random()*7)];
         this.tet = { x: 5, y: 22, id: r, tet: this.tets[r], step: 0};
-        this.filter = new Phaser.Filter(this, null, fragmentSrc);
-	    this.filter.setResolution(240, 480);
-        this.sprite = this.add.sprite(62,0);
-	    this.sprite.width = 240;
-	    this.sprite.height = 480;
-	    this.sprite.visible = true;
-	    this.sprite.filters = [ this.filter ];
         this.cursors = this.input.keyboard.createCursorKeys();
-        this.real = { step: 0 };
+        this.real = { step: 0, ox: 62 };
         this.input.onDown.add(this.onDown, this);
     },
-    mood: function(){
+    mood: function() {
     	switch (this.mode)
         {
             case Tetris.intro:
@@ -199,48 +223,53 @@ Tetris.Game.prototype = {
 		// debug("update", this.mode);
 		/* update the game and handle user interaction */
 		var i, j, t;
-		
-		this.real.step += 1;
-		if (this.real.step % 30 == 0){
-		    this.moveDown();
+		if (this.mode == Tetris.playing) {
+    		this.scoreText.text = "Score: "+this.score;
+    		this.tetText.text = "Stat: [ "+ this.tet.id +", "+ (this.real.ox + this.tet.x * 20) +", "+ 20 * this.tet.y +", "+ this.tet.step +" ]";
+    		this.realText.text = this.real.step + "\n";
+    		this.gridMatrixText.visible = true;
+    		t = this.tet.tet[this.tet.step];
+    		for( i in t ) {
+        	    for( j in t[i] ) {
+        	        if (t[i][j]) {
+        	            this.realText.text += "o";
+        	        } else {
+        	            this.realText.text += "-";
+        	        }
+        	    }
+        	    this.realText.text += "\n";
+    		}
+    		this.filter.update();
+		    this.add.sprite ( (this.real.ox + this.tet.x * 20) , 20 * this.tet.y, "" );
+		    this.real.step += 1;
+    		if (this.real.step % 30 == 0) {
+    		    this.moveDown();
+    		}
+    		this.checkRows();
 		}
-		this.filter.update();
-		this.scoreText.text = "Score: "+this.score;
-		this.tetText.text = "Stat: [ "+ this.tet.id +", "+ this.tet.x +", "+ this.tet.y +", "+ this.tet.step +" ]";
-		this.realText.text = this.real.step + "\n";
-		t = this.tet.tet[this.tet.step];
-		for( i in t ) {
-    	    for( j in t[i] ) {
-    	        if (t[i][j]) {
-    	            this.realText.text += "o";
-    	        } else {
-    	            this.realText.text += "-";
-    	        }
-    	    }
-    	    this.realText.text += "\n";
-		}
-		
 		this.omode = this.mode;
-    	if(this.score > 250){
+    	if (this.score > 250) {
         	this.mode = Tetris.win;
         }
        	if (this.mode == Tetris.paused) {
-     		if(this.input.keyboard.isDown(Phaser.Keyboard.P)){
+     		if (this.input.keyboard.isDown(Phaser.Keyboard.P)) {
         		this.keyText.text = "P";
         		this.mode = Tetris.playing;
         	}
     	} else if (this.mode == Tetris.win) {
-        	if(this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
+        	if (this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
         		this.mode = Tetris.intro;
 	        }
 	    } else {
-	        if(this.input.keyboard.isDown(Phaser.Keyboard.P)){
+    	    if (this.input.keyboard.isDown(Phaser.Keyboard.P)) {
         		this.keyText.text = "P";
         		this.mode = Tetris.paused;
         	}
-    		if(this.input.keyboard.isDown(Phaser.Keyboard.ESC)){
+    		if (this.input.keyboard.isDown(Phaser.Keyboard.ESC)) {
         		debug("esc");
-        		this.mode = Tetris.over;
+        		if (this.real.step % 5 == 0) {
+        		    this.mode = Tetris.over;
+        		}
 			}
         	if (this.cursors.left.isDown ) {
             	this.keyText.text = "Left";
@@ -252,63 +281,107 @@ Tetris.Game.prototype = {
             } 
             if (this.cursors.up.isDown ) {
             	this.keyText.text = "Rotate";
-            	this.rotate();
+            	if (this.real.step % 5 == 0) {
+            	    this.rotate();    
+            	}
             } 
             if (this.cursors.down.isDown) {
             	this.keyText.text = "Down";
             	this.moveDown();
             } 
-			if(this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
+			if (this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
 	       		this.keyText.text = "Drop";
 	       		this.drop();
 	        }
     	}
-    	
-    	// this.real.x = this.origx + this.tet.x
-    	
-        if(this.mode !== this.omode){
+    	if (this.mode !== this.omode) {
         	this.mood();
         }
+	},
+	checkRows: function () {
+	    debug("checkRows");
+	    var t = this.gridMatrix.slice(0), i, j, counter;
+	    
+	    this.gridMatrixText.text = "";
+	    for( i in t ) {
+    	    counter = 0;
+    	    for( j in t[i] ) {
+    	        if ( i == this.tet.x && j == 22-this.tet.y ) {
+    	            debug( this.tet.tet[ this.tet.step ] );
+    	        }
+    	        
+    	        if (t[i][j]) {
+    	            counter += 1;
+    	            this.gridMatrixText.text += "oo";
+    	        } else {
+    	            this.gridMatrixText.text += "--";
+    	        }
+    	    }
+    	    this.gridMatrixText.text += "\n";
+    	    if (counter == 10) {
+    	        /* clear this row */
+    	        this.score += 1;
+    	        /* and move it down */
+    	        this.gridMatrix[i] = [0,0,0,0,0,0,0,0,0,0];
+    	        counter = 0;
+    	    }
+	    }
 	},
 	drop: function () {
 		debug("drop",this.tet);
 		/* move tet to lowest location and create new tet */
-		var r = this.tetList[Math.floor(Math.random()*7)];
+		
+		this.checkTet();
+	},
+	checkTet: function(){
+	    debug("checkTet");
         
-		/* new tet */
-        this.tet = { x: 5, y: 22, id: r, tet: this.tets[r], step: 0};
+        var i, j, 
+		    t = this.tet.tet[this.tet.step];
+		for( i in t ) {
+    	    for( j in t[i] ) {
+    	        if (t[i][j]) {
+    	            /* Translate the tet matrix into the grid */
+    	            debug("T: ", this.tet.x, j, i, this.tet.y);
+    	        }
+    	    }
+		}
+		this.newTet();
+	},
+    newTet: function(){
+        debug("newTet");
+        /* new tet */
+        var r = this.tetList[Math.floor(Math.random()*7)];
+        this.tet = { "x": 5, "y": 22, "id": r, "tet": this.tets[r], "step": 0};
 	},
 	rotate: function () {
 		debug("rotate",this.tet.step);
 		/* Check the tet can rotate then rotate */
-		this.tet.step += 1;
-		this.tet.step = this.tet.step % this.tet.tet.length;
-	},
+  	    this.tet.step += 1;
+  	    this.tet.step = this.tet.step % this.tet.tet.length;
+    },
 	moveDown: function () {
 		debug("moveDown",this.tet);
 		/* Check the tet can move then move */
-		var r;
-		
-		if(this.tet.y > 0){
-		    this.tet.y --;
+		if (this.tet.y > 0) {
+		    this.tet.y -= 1;
 		} else {
-    		r = this.tetList[Math.floor(Math.random()*7)];
-    		/* new tet */
-            this.tet = { x: 5, y: 22, id: r, tet: this.tets[r], step: 0};
-		}
+    	    this.newTet();
+    	}
 	},
 	moveRight: function () {
 		debug("moveRight",this.tet);
 		/* Check the tet can move then move */
-		if(this.tet.x < 10) {
-		    this.tet.x ++;    
+		/* Check the grid for collisions */
+		if (this.tet.x < 10) {
+		    this.tet.x += 1;    
 		}
 	},
 	moveLeft: function () {
 		debug("moveLeft",this.tet);
 		/* Check the tet can move then move */
-		if(this.tet.x > 0) {
-		    this.tet.x --;    
+		if (this.tet.x > 0) {
+		    this.tet.x -= 1;
 		} 
 	},
     start: function () {
@@ -317,14 +390,35 @@ Tetris.Game.prototype = {
         this.mode = Tetris.playing;
         this.sound.play('walk');
         this.score = 0;
-        this.grid = [];
+        this.gridMatrix = [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,1,0,0,0,0,1,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,0,1,1,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0] ];
         this.mood();
     },
-	main: function (){
+	main: function () {
         debug("Main");
         /* Main game state */
         this.surface.loadTexture('playing');
-
         this.helpText.text = "Keys Esc-Quit P-Pause Arrows \n And Space to drop";
         this.scoreText.visible = true;
 		this.keyText.visible = true;
@@ -333,14 +427,14 @@ Tetris.Game.prototype = {
 		this.tetText.visible = true;
 		this.realText.visible = true;
 	},
-    paused: function (){
+    paused: function () {
         debug("Paused");
         /* Stop its paused */
         this.surface.loadTexture('paused');
         this.pausedText.visible = true;
         this.keyText.visible = false;            
     },
-	win: function (){
+	win: function () {
         debug("Win");
         /* Display a winning message */
         this.surface.loadTexture('win');
@@ -361,7 +455,29 @@ Tetris.Game.prototype = {
 		this.nextText.visible = false;
 		this.pausedText.visible = false;
         this.score = 0;
-        this.real = { step: 0 };
+        this.gridMatrix = [ 
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0]
+        ];
+        this.real = { step: 0, ox: 62 };
         this.sound.play('reload');            
     },
     preRender: function () {
